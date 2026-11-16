@@ -25,6 +25,14 @@ def require_http_url(url: str) -> None:
         raise SystemExit(1)
 
 
+def warm_connection(session: requests.Session, url: str) -> float:
+    started = time.perf_counter()
+    # HEAD по умолчанию не идёт за редиректами, GET — идёт. Повторяем тот же путь.
+    response = session.head(url, timeout=TIMEOUT_SECONDS, allow_redirects=True)
+    response.close()
+    return time.perf_counter() - started
+
+
 def download_once(session: requests.Session, url: str) -> tuple[int, float]:
     started = time.perf_counter()
     with session.get(url, stream=True, timeout=TIMEOUT_SECONDS) as response:
@@ -42,6 +50,9 @@ def main() -> None:
     require_http_url(args.url)
 
     session = requests.Session()
+    warmup_seconds = warm_connection(session, args.url)
+    print(f"warmup: {warmup_seconds:.3f} s")
+
     byte_counts: list[int] = []
     durations: list[float] = []
 
